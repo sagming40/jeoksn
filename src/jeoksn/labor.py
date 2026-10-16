@@ -5,6 +5,7 @@
 '퇴직금 적립 비울', '원가로 인정되는 작업 시간', '제품 하나에 든 시간'을 다룬다
 """
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 from jeoksn.rounding import to_decimal, truncate
@@ -85,3 +86,76 @@ def labor_hours_per_unit(
         - to_decimal(beginning_wip) * to_decimal(beginning_progress)
     )
     return truncate(to_decimal(total_hours) / equivalent, 2)
+
+
+@dataclass(frozen=True)
+class DailyWage:
+    """
+    하루치 품삯 영수증
+
+    항목별로 찍혀있어서 '어떻게 이 금액이 나왔는지' 한눈에 보인다
+    frozen=True = 영수증은 한 번 뽑으면 고칠 수 없다 (위조 방지)
+    """
+
+    base: Decimal         # 기본급 (시중노임)
+    overtime: Decimal     # 제수당 (연장근로수당)
+    bonus: Decimal        # 상여금 (하루치로 나눈 몫)
+    retirement: Decimal   # 퇴직급여충당금
+    work_hours: Decimal   # 하루 총 작업시간 (정상 + 연장)
+
+    @property
+    def total(self) -> Decimal:
+        """1일 합계: 영수증 맨 아래 '합계'줄"""
+        return self.base + self.overtime + self.bonus + self.retirement
+
+    @property
+    def hourly(self) -> Decimal:
+        """시간당 노임단가: 하루 합계를 일한 시간으로 나눈다. 원 미만 절사"""
+        return truncate(self.total / self.work_hours)
+
+
+def daily_wage(
+    *,
+    market_wage,
+    overtime_hours,
+    bonus_rate,
+    years_of_service,
+    regular_hours=8,
+    overtime_premium="1.5",
+) -> DailyWage:
+    """
+    노임단가 영수증을 출력한다
+
+    기본급은 업체가 실제로 주는 돈이 아니라 '시중노임'을 사용한다
+    ─ 정부는 시장 평균 단가만 인정한다. 업체가 더 지불하더라도 그건 업체의 사정이다.
+    자격수당 등은 시중노임 안에 이미 포함되어 있어서 따로 받지 않는다
+    시험 기준: 각 항목 원 미만 절사
+    """
+    base = to_decimal(market_wage)
+
+    # 1) 제수당: 연장근로는 시급의 1.5배 ─ 시급 = 일당 ÷ 정상근무 8시간
+    hourly_base = base / to_decimal(regular_hours)
+    overtime = truncate(
+        hourly_base * to_decimal(overtime_hours) * to_decimal(overtime_premium)
+    )
+
+    # 2) 상여금: 연 300%를 12달로 나눠서 하루 단가에 얹는다
+    #    1년에 3번 지급되는 보너스를 매달 조금씩 미리 적립하는 느낌
+    bonus = truncate(base * to_decimal(bonus_rate) / 12)
+
+    # 3) 퇴직급여충당금: 1년 이상 근속자만, (기본급 + 제수당 + 상여) ÷ 12
+    #    1년 근무 시 1달 치 퇴직금 → 그래서 1/12씩 적립해둔다
+    if to_decimal(years_of_service) >= 1:
+        retirement = truncate((base + overtime + bonus) / 12)
+    else:
+        retirement = Decimal(0)
+
+    # 4) 영수증 발행
+    work_hours = to_decimal(regular_hours) + to_decimal(overtime_hours)
+    return DailyWage(
+        base=base,
+        overtime=overtime,
+        bonus=bonus,
+        retirement=retirement,
+        work_hours=work_hours,
+    )

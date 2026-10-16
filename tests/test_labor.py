@@ -3,6 +3,7 @@ from decimal import Decimal
 import pytest
 
 from jeoksn.labor import (
+    daily_wage,
     labor_hours_per_unit,
     normal_labor_hours,
     retirement_allowance_rate,
@@ -54,3 +55,36 @@ def test_labor_hours_per_unit_with_wip():
         ending_progress="0.5",      # 기말재공품 완성도 50%
     )
     assert result == Decimal("10.95")
+
+
+# ── 노임단가: 하루치 품삯 영수증을 뽑아서 시간당으로 나누기 ──
+
+def test_daily_wage_breakdown():
+    # 풀이집 계산 9 (용접공)
+    # 미끼: 업체 기본급 100,000원, 자격수당, 월 22일 → 입력칸 자체가 없다
+    wage = daily_wage(
+        market_wage=91_928,        # 시중노임 (기본급에는 이걸 사용한다)
+        overtime_hours=2,          # 연장근로 2시간
+        bonus_rate=3,              # 상여 연 300% → 3배
+        years_of_service="2.5",    # 근속 2년 6개월
+    )
+    # 영수증 항목 하나하나 확인 (주관식은 과정 점수가 있으니까)
+    assert wage.base == Decimal("91928")
+    assert wage.overtime == Decimal("34473")
+    assert wage.bonus == Decimal("22982")
+    assert wage.retirement == Decimal("12448")
+    assert wage.total == Decimal("161831")
+    # 최종 답: 교재 정답 16,183/Hr
+    assert wage.hourly == Decimal("16183")
+
+
+def test_daily_wage_no_retirement_under_one_year():
+    # 근속 1년 미만이면 퇴직급여충당금은 0원
+    wage = daily_wage(
+        market_wage=91_928,
+        overtime_hours=2,
+        bonus_rate=3,
+        years_of_service="0.5",
+    )
+    assert wage.retirement == Decimal("0")
+    assert wage.total == Decimal("149383")
