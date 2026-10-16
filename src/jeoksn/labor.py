@@ -17,6 +17,11 @@ NORMAL_WORK = {"정상작업", "직무교육", "작업준비"}
 # 비정상이라 원가에서 차감하는 작업 종류
 ABNORMAL_WORK = {"기계고장", "정전대기"}
 
+# 1년 = 12개월
+# 퇴직금(1년 근무 시 1개월 치)과 상여금(1년 치를 개월로 쪼갬) 두 금액 모두 이 상수를 사용한다
+# 비유 ─ 달력에 원래 찍혀있는 숫자. 규정이 해마다 바뀌는 값이 아니기 때문에 rates.json이 아닌 코드 상수로 둔다
+MONTH_PER_YEAR = 12
+
 
 def retirement_allowance_rate(*, total_labor, eligible_labor) -> Decimal:
     """
