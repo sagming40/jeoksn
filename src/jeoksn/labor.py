@@ -2,7 +2,7 @@
 노무비 계산 모음
 
 노무비 = 사람이 일한 값
-'퇴직금 적립 비울', '원가로 인정되는 작업 시간', '제품 하나에 든 시간'을 다룬다
+'퇴직금 적립 비율', '원가로 인정되는 작업 시간', '제품 하나에 든 시간'을 다룬다
 """
 
 from dataclasses import dataclass
@@ -28,7 +28,7 @@ def retirement_allowance_rate(*, total_labor, eligible_labor) -> Decimal:
     비유 ─ 아르바이트를 1년을 다 채우지 못하고 그만두게 되면 퇴직금이 없는 것과 같다
     시험 기준: 소수 둘째 자리 절사
     """
-    # 대상자 비중 = 1년 이상 근속자 급여 + 전체 노무비
+    # 대상자 비중 = 1년 이상 근속자 급여 ÷ 전체 노무비
     eligible_share = to_decimal(eligible_labor) / to_decimal(total_labor)
 
     # 1/12 × 비중 × 100 → %
