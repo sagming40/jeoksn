@@ -20,7 +20,7 @@ ABNORMAL_WORK = {"기계고장", "정전대기"}
 # 1년 = 12개월
 # 퇴직금(1년 근무 시 1개월 치)과 상여금(1년 치를 개월로 쪼갬) 두 금액 모두 이 상수를 사용한다
 # 비유 ─ 달력에 원래 찍혀있는 숫자. 규정이 해마다 바뀌는 값이 아니기 때문에 rates.json이 아닌 코드 상수로 둔다
-MONTH_PER_YEAR = 12
+MONTHS_PER_YEAR = 12
 
 
 def retirement_allowance_rate(*, total_labor, eligible_labor) -> Decimal:
@@ -37,7 +37,7 @@ def retirement_allowance_rate(*, total_labor, eligible_labor) -> Decimal:
     eligible_share = to_decimal(eligible_labor) / to_decimal(total_labor)
 
     # 1/12 × 비중 × 100 → %
-    rate = eligible_share / 12 * 100
+    rate = eligible_share / MONTHS_PER_YEAR * 100
     return truncate(rate, 2)
 
 
@@ -146,12 +146,12 @@ def daily_wage(
 
     # 2) 상여금: 연 300%를 12달로 나눠서 하루 단가에 얹는다
     #    1년에 3번 지급되는 보너스를 매달 조금씩 미리 적립하는 느낌
-    bonus = truncate(base * to_decimal(bonus_rate) / 12)
+    bonus = truncate(base * to_decimal(bonus_rate) / MONTHS_PER_YEAR)
 
     # 3) 퇴직급여충당금: 1년 이상 근속자만, (기본급 + 제수당 + 상여) ÷ 12
     #    1년 근무 시 1달 치 퇴직금 → 그래서 1/12씩 적립해둔다
     if to_decimal(years_of_service) >= 1:
-        retirement = truncate((base + overtime + bonus) / 12)
+        retirement = truncate((base + overtime + bonus) / MONTHS_PER_YEAR)
     else:
         retirement = Decimal(0)
 
